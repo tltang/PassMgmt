@@ -2,6 +2,7 @@ from tkinter import *
 import os.path
 import random
 import pyperclip
+import json
 # reason messagebox has to be imported separately is becuase it is not a class
 from tkinter import messagebox
 
@@ -33,8 +34,13 @@ def add_clicked():
     user = username_input.get()
     password = password_input.get()
     is_ok = True
-
-    if website == "" or password == "":
+    new_data = {
+        website: {
+            "email": user,
+            "password": password
+        }
+    }
+    if len(website) == 0 or len(password) == 0:
         messagebox.showerror(title="Oops", message="Please don't leave any fields empty!")
         is_ok = False
         website_input.focus()
@@ -43,26 +49,57 @@ def add_clicked():
         is_ok = messagebox.askokcancel(website, message=f"You have entered \n website: {website} \n userid: {user} \n password: {password} \n ok to save?")
 
     if is_ok:
-        currdir = os.getcwd()
-        path = currdir + "\password.txt"
-        isdir = os.path.exists(path)
-        if isdir:
-            with open("password.txt") as import_password:
-                passwords = import_password.readlines()
+        try:
+            with open("password.json", "r") as import_password:
+                json_data = json.load(import_password)
+        except FileNotFoundError:
+            with open("password.json", "w") as import_password:
+                json.dump(new_data, import_password, indent=4)
         else:
-            f = open("password.txt", "w")
+            json_data.update(new_data)
 
-        newentry = website + " | " + user + " | " + password + "\n"
+            with open("password.json", "w") as import_password:
+                json.dump(json_data, import_password, indent=4)
+        finally:
+            website_input.delete(0, 'end')
+            password_input.delete(0, 'end')
+            username_input.delete(0, 'end')
+            username_input.insert(0, 'tltang74@gmail.com')
+            website_input.focus()
 
-        with open("password.txt", "a") as import_password:
-            import_password.write(newentry)
+# ---------------------------- SEARCH PASSWORD ------------------------------- #
+def search_clicked():
+    website = website_input.get()
+    is_ok = True
+    lFound = False
 
-        website_input.delete(0, 'end')
-        password_input.delete(0, 'end')
-        username_input.delete(0, 'end')
-        username_input.insert(0, 'tltang74@gmail.com')
+    if website == "":
+        messagebox.showerror(title="Oops", message="Please enter a website to search for!")
+        is_ok = False
+        website_input.focus()
 
-    website_input.focus()
+    if is_ok == False:
+        return
+
+    try:
+        with open("password.json", "r") as import_password:
+            json_data = json.load(import_password)
+    except FileNotFoundError:
+        messagebox.showerror(title="Oops", message="Password File Not Found!")
+    else:
+        for (k, v) in json_data.items():
+            if k == website:
+                lFound = True
+                cEmail = v["email"]
+                cPw = v["password"]
+                messagebox.showinfo(website, message=f"userid: {cEmail} \n password: {cPw} \n\n\n")
+                password_input.delete(0, 'end')
+                username_input.delete(0, 'end')
+                password_input.insert(0, cPw)
+                username_input.insert(0, cEmail)
+
+        if lFound == False:
+            messagebox.showerror(title="Oops", message=f"Website {website} is not in password file!")
 
 # ---------------------------- UI SETUP ------------------------------- #
 window = Tk()
@@ -80,8 +117,8 @@ my_label2 = Label(text="Email/Username:")
 my_label2.grid(row=2)
 my_label3 = Label(text="Password:")
 my_label3.grid(row=3)
-website_input = Entry(width=35)
-website_input.grid(column=1, row=1, columnspan=2, sticky='EW')
+website_input = Entry(width=21)
+website_input.grid(column=1, row=1, sticky='EW')
 website_input.focus()
 username_input = Entry(width=35)
 username_input.grid(column=1, row=2, columnspan=2, sticky='EW')
@@ -91,44 +128,9 @@ password_input.grid(column=1, row=3, sticky='EW')
 
 add_button = Button(text="Add", width=36, command=add_clicked)
 add_button.grid(column=1, row=4, columnspan=2, sticky='EW')
+search_button = Button(text="Search", command=search_clicked)
+search_button.grid(column=2, row=1, sticky='EW')
 generate_button = Button(text="Generate Password", command=generate_password)
 generate_button.grid(column=2, row=3)
-
-# timer_text = canvas.create_text(100,140, text="00:00", fill="white", font=(FONT_NAME, 35, 'bold'))
-# my_label3 = Label(fg=GREEN, bg=YELLOW, font=("Arial", 8, "bold"))
-# my_label3.grid(column=2, row=4)
-#
-#columnspan
-#
-
-def reset_clicked():
-
-    global reps, finalcheckmark
-    reps = 0
-    finalcheckmark = ""
-    my_label.config(text="Timer", fg=GREEN)
-    canvas.itemconfig(timer_text, text="00:00")
-    my_label3.config(text=finalcheckmark)
-    window.after_cancel(timer)
-
-# ---------------------------- COUNTDOWN MECHANISM ------------------------------- #
-def count_down(count):
-    global timer, reps, checkmark, finalcheckmark
-    if count > 0:
-        timer = window.after(1000, count_down, count - 1)
-        minute = count // 60
-        second = count % 60
-        finaltext = str(minute) + ":" + "{:02d}".format(second)
-        canvas.itemconfig(timer_text, text=finaltext)
-    else:
-        start_clicked()
-        window.lift()
-        if reps % 2 == 0:
-            finalcheckmark = finalcheckmark + checkmark
-            my_label3.config(text=finalcheckmark)
-
-# ---------------------------- UI SETUP ------------------------------- #
-
-
 
 window.mainloop()
